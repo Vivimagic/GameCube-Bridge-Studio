@@ -13,4 +13,4 @@ Both USB plugs must be connected: Black carries data, while the Gray plug exclus
 3. Single-Install Service
 One installer binds WinUSB + signed XInput silently and auto-starts on boot — no Zadig clicks or apps to launch.
 
-This is free and unencumbered software released into the public domain.
+For more information on the license please go here: https://github.com/Vivimagic/GC-Controller-Bridge/blob/main/License
