@@ -1,16 +1,23 @@
-<img width="150" height="150" alt="vivimagic-w012-installer" src="https://github.com/user-attachments/assets/246deaee-5015-44d3-b92a-7ddd40f881b5" /><?xml version="1.0" encoding="UTF-8"?>
-# GC-Controller-Bridge
-This is a fresh driver setup for the Mayflash adaptor to enable vibration for Steam on Windows, Mac and Linux.
+# GC-Controller-Bridge (v1.0.0 GM)
 
-When the Mayflash W012 rear switch is set to PC mode, it enumerates as a legacy DirectInput gamepad (0079:1846). Modern PC games expect XInput (Xbox 360/One), so controllers only respond when Steam forces Generic Gamepad wrapping — which strips force-feedback commands.
+Publisher: [Vivimagic](https://github.com/Vivimagic)  
+Repository: https://github.com/Vivimagic/GC-Controller-Bridge
 
-1. Wii U / NS Mode
-Flipping the switch exposes native 057E:0337 with raw 4-port polling and binary rumble commands.
+Universal 4-port GameCube Controller Adapter driver installer, live input/rumble tester, automatic Dolphin/Slippi USB handover, and RP2040 Firmware & SDK workbench for **Windows**, **macOS**, and **Linux / Steam Deck**.
 
-2. Dual USB Power
-Both USB plugs must be connected: Black carries data, while the Gray plug exclusively powers the 5V rumble motors.
+## Supported Adapters (Wii U / Switch Mode `057E:0337`)
+- Official Nintendo WUP-028
+- Mayflash W012 (4-Port)
+- MEIRIYFA 4-Port Adapter
+- Nyko / Kelux / Piranha / Intec / Hitbox clones
+- Input Integrity Lossless & Handheld Legend GC Pocket+
 
-3. Single-Install Service
-One installer binds WinUSB + signed XInput silently and auto-starts on boot — no Zadig clicks or apps to launch.
+## Automated Cross-Platform Releases (Windows + macOS + Linux)
+Pushing a version tag (e.g. `v1.0.0`) or clicking **Actions -> Build v1.0.0 GM Release -> Run workflow** automatically compiles and publishes:
+- **Windows**: `Vivimagic-GCAdapter-Setup-v1.0.0-win-x64.exe`
+- **macOS**: `Vivimagic-GCAdapter-Setup-v1.0.0-macos-universal.dmg` & `Vivimagic-GCAdapter-Setup-v1.0.0-macos-app.zip`
+- **Linux / Steam Deck**: `vivimagic-gcadapter-setup_1.0.0_all.deb`, `Vivimagic-GCAdapter-Setup-v1.0.0-linux.tar.gz`, & `Vivimagic-GCAdapter-Setup-v1.0.0-linux.sh`
+- **Checksums**: `SHA256SUMS.txt`
 
-For more information on the license please go here: https://github.com/Vivimagic/GC-Controller-Bridge/blob/main/License
+## License
+Copyright (c) 2026 Ashley Glover. All Rights Reserved.

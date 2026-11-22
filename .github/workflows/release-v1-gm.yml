@@ -1,0 +1,305 @@
+# Vivimagic GameCube Controller Adapter Driver — Cloud Release Builder (v1.0.0 GM)
+# Copyright (c) 2026 Ashley Glover. All Rights Reserved.
+# Publisher: Vivimagic (https://github.com/Vivimagic)
+#
+# Builds native Windows (.exe), macOS (.dmg + .app.zip), and Linux (.deb + .tar.gz + .sh)
+# packages in parallel on GitHub-hosted cloud runners without needing macOS or Linux locally.
+
+name: Build v1.0.0 GM Release (Win + macOS + Linux)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to publish (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      prerelease:
+        description: 'Mark GitHub Release as Pre-release (beta / test build)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  DEFAULT_TAG: 'v1.0.0'
+
+jobs:
+  build-windows:
+    name: Windows 10/11 Native GUI (.exe)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: meta
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.release_tag }}" } else { "${{ github.ref_name }}" }
+          if (-not $tag) { $tag = "$env:DEFAULT_TAG" }
+          echo "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Restore optional Authenticode PFX from secrets
+        shell: pwsh
+        env:
+          PFX_B64: ${{ secrets.VIVIMAGIC_PFX_BASE64 }}
+        run: |
+          if ($env:PFX_B64) {
+            [IO.File]::WriteAllBytes("Vivimagic.pfx", [Convert]::FromBase64String($env:PFX_B64))
+            Write-Host "[OK] Restored Vivimagic.pfx for commercial Authenticode signing."
+          }
+
+      - name: Compile native WinForms GUI installer (.exe)
+        shell: cmd
+        env:
+          VIVIMAGIC_CI: '1'
+          VIVIMAGIC_PFX_PASSWORD: ${{ secrets.VIVIMAGIC_PFX_PASSWORD }}
+        run: |
+          call Vivimagic-Build-Setup-EXE.cmd
+
+      - name: Stage Windows release artifact
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.meta.outputs.tag }}"
+          if (-not (Test-Path "Vivimagic-MayflashW012-Setup.exe")) {
+            throw "Expected Vivimagic-MayflashW012-Setup.exe was not generated."
+          }
+          New-Item -ItemType Directory -Force -Path "dist/windows" | Out-Null
+          Copy-Item "Vivimagic-MayflashW012-Setup.exe" "dist/windows/Vivimagic-GCAdapter-Setup-$tag-win-x64.exe"
+          Remove-Item -Force -ErrorAction SilentlyContinue "Vivimagic.pfx"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/windows/*
+
+  build-macos:
+    name: macOS Universal App Bundle (.dmg + .zip)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.release_tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          TAG="${TAG:-$DEFAULT_TAG}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build native Vivimagic W012 Setup.app (.icns + codesign)
+        env:
+          VIVIMAGIC_CI: '1'
+        run: |
+          tr -d '\r' < Vivimagic-Build-macOS-App.command > Vivimagic-Build-macOS-App.command.lf
+          mv Vivimagic-Build-macOS-App.command.lf Vivimagic-Build-macOS-App.command
+          chmod +x Vivimagic-Build-macOS-App.command
+          ./Vivimagic-Build-macOS-App.command
+          test -d "Vivimagic W012 Setup.app"
+
+      - name: Package macOS .dmg disk image and .zip archive
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          mkdir -p dist/macos dmg-stage
+          cp -R "Vivimagic W012 Setup.app" "dmg-stage/"
+          ln -s /Applications "dmg-stage/Applications"
+          cp LICENSE.txt "dmg-stage/LICENSE.txt" 2>/dev/null || true
+
+          # Build compressed UDZO .dmg for drag-and-drop macOS installation
+          hdiutil create \
+            -volname "Vivimagic GCAdapter Setup $TAG" \
+            -srcfolder dmg-stage \
+            -ov -format UDZO \
+            "dist/macos/Vivimagic-GCAdapter-Setup-$TAG-macos-universal.dmg"
+
+          # Also package resource-fork-safe .zip of the .app bundle
+          ditto -c -k --sequesterRsrc --keepParent \
+            "Vivimagic W012 Setup.app" \
+            "dist/macos/Vivimagic-GCAdapter-Setup-$TAG-macos-app.zip"
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/macos/*
+
+  build-linux:
+    name: Linux GUI Package (.deb + .tar.gz + .sh)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.release_tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          TAG="${TAG:-$DEFAULT_TAG}"
+          VER="${TAG#v}"
+          case "$VER" in
+            [0-9]*) ;;
+            *) VER="1.0.0" ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Validate and package Linux installers (.sh, .tar.gz, .deb)
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          VER="${{ steps.meta.outputs.ver }}"
+          tr -d '\r' < Vivimagic-MayflashW012-Setup-Linux.sh > Vivimagic-MayflashW012-Setup-Linux.sh.lf
+          mv Vivimagic-MayflashW012-Setup-Linux.sh.lf Vivimagic-MayflashW012-Setup-Linux.sh
+          chmod +x Vivimagic-MayflashW012-Setup-Linux.sh
+          bash -n Vivimagic-MayflashW012-Setup-Linux.sh
+
+          mkdir -p dist/linux linux-tar-stage
+
+          # 1. Direct executable .sh installer
+          cp Vivimagic-MayflashW012-Setup-Linux.sh "dist/linux/Vivimagic-GCAdapter-Setup-$TAG-linux.sh"
+          chmod +x "dist/linux/Vivimagic-GCAdapter-Setup-$TAG-linux.sh"
+
+          # 2. Portable .tar.gz bundle (Ubuntu, Fedora, Arch, SteamOS / Steam Deck)
+          cp Vivimagic-MayflashW012-Setup-Linux.sh linux-tar-stage/
+          cp vivimagic-w012-installer.svg linux-tar-stage/ 2>/dev/null || true
+          cp LICENSE.txt linux-tar-stage/ 2>/dev/null || true
+          cat <<EOF_README > linux-tar-stage/README-LINUX.txt
+          Vivimagic GameCube Controller Adapter Setup ($TAG)
+          ===================================================
+          1. Flip your GameCube adapter (Mayflash W012, MEIRIYFA, Official WUP-028, Nyko, etc.) to Wii U / Switch mode.
+          2. Plug in BOTH the Black (Data) and Gray (5V Rumble) USB connectors.
+          3. Run:  ./Vivimagic-MayflashW012-Setup-Linux.sh
+          EOF_README
+          tar -czf "dist/linux/Vivimagic-GCAdapter-Setup-$TAG-linux.tar.gz" -C linux-tar-stage .
+
+          # 3. Native Debian / Ubuntu .deb package
+          DEB_ROOT="deb-pkg"
+          mkdir -p "$DEB_ROOT/DEBIAN" \
+                   "$DEB_ROOT/usr/local/bin" \
+                   "$DEB_ROOT/usr/share/applications" \
+                   "$DEB_ROOT/usr/share/icons/hicolor/scalable/apps"
+
+          install -m 755 Vivimagic-MayflashW012-Setup-Linux.sh "$DEB_ROOT/usr/local/bin/vivimagic-gcadapter-setup"
+          if [ -f vivimagic-w012-installer.svg ]; then
+            install -m 644 vivimagic-w012-installer.svg "$DEB_ROOT/usr/share/icons/hicolor/scalable/apps/vivimagic-w012-installer.svg"
+          fi
+
+          cat <<'EOF_DESKTOP' > "$DEB_ROOT/usr/share/applications/vivimagic-gcadapter-setup.desktop"
+          [Desktop Entry]
+          Name=Vivimagic GameCube Adapter Setup
+          Comment=Install and test 4-port GameCube Controller Adapters (WUP-028 / Mayflash / MEIRIYFA)
+          Exec=/usr/local/bin/vivimagic-gcadapter-setup
+          Icon=vivimagic-w012-installer
+          Terminal=false
+          Type=Application
+          Categories=Utility;Game;HardwareSettings;
+          EOF_DESKTOP
+
+          cat <<EOF_CTRL > "$DEB_ROOT/DEBIAN/control"
+          Package: vivimagic-gcadapter-setup
+          Version: ${VER}
+          Section: utils
+          Priority: optional
+          Architecture: all
+          Depends: bash, python3
+          Recommends: python3-tk, policykit-1 | pkexec
+          Maintainer: Vivimagic <https://github.com/Vivimagic>
+          Description: Vivimagic 4-Port GameCube Controller Adapter GUI Setup (v1.0.0 GM)
+           Configures 057E:0337 udev permissions, uinput, Dolphin/Slippi USB handover,
+           and includes a live controller & rumble tester.
+          EOF_CTRL
+
+          dpkg-deb --build "$DEB_ROOT" "dist/linux/vivimagic-gcadapter-setup_${VER}_all.deb"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: dist/linux/*
+
+  publish-release:
+    name: Publish v1.0.0 GM GitHub Release
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.release_tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          TAG="${TAG:-$DEFAULT_TAG}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS.txt
+        working-directory: release-assets
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          PRERELEASE_FLAG=""
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          cat <<'EOF_NOTES' > release-notes.md
+          # Vivimagic GameCube Controller Adapter Suite — __TAG__ (GM)
+
+          **Universal 4-Port GameCube Adapter Driver, Live Tester, Dolphin Auto-Handover & Firmware SDK Workbench**
+
+          Supports **Official Nintendo WUP-028**, **Mayflash W012**, **MEIRIYFA**, **Nyko**, **Kelux / Piranha / Intec / Hitbox**, and **Input Integrity Lossless / GC Pocket+** in **Wii U / Switch mode (`057E:0337`)**.
+
+          ## Downloads
+          - **Windows 10 / 11 (64-bit)**: Download `Vivimagic-GCAdapter-Setup-__TAG__-win-x64.exe` and run it directly.
+          - **macOS (Apple Silicon & Intel)**: Download `Vivimagic-GCAdapter-Setup-__TAG__-macos-universal.dmg`, open it, and drag **Vivimagic W012 Setup.app** to Applications (first launch: right-click -> **Open** if Gatekeeper prompts for ad-hoc signed apps).
+          - **Linux & Steam Deck**: Download `vivimagic-gcadapter-setup_*_all.deb` (Debian/Ubuntu) or `Vivimagic-GCAdapter-Setup-__TAG__-linux.tar.gz` / `.sh` (Fedora, Arch, SteamOS).
+
+          ## Before Testing
+          1. Flip the switch on your adapter to **Wii U / Switch** (not PC).
+          2. Plug in **both** the **Black** (data) and **Gray** (5V rumble motor power) USB connectors.
+          3. Close Dolphin while testing XInput/Steam; Dolphin Auto-Handover automatically yields native JoyBus + rumble when Dolphin launches.
+
+          ---
+          Copyright (c) 2026 Ashley Glover. All Rights Reserved.
+          EOF_NOTES
+          sed -i "s/__TAG__/$TAG/g" release-notes.md
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber
+            gh release edit "$TAG" --title "Vivimagic GameCube Adapter Suite $TAG (GM)" --notes-file release-notes.md
+          else
+            gh release create "$TAG" release-assets/* \
+              --title "Vivimagic GameCube Adapter Suite $TAG (GM)" \
+              --notes-file release-notes.md \
+              $PRERELEASE_FLAG
+          fi
