@@ -1,14 +1,24 @@
 {
+  "version": "2.0.0",
   "profileName": "Mayflash W012 — Modern XInput + Rumble",
   "publisher": "Vivimagic",
   "copyright": "Copyright (c) 2026 Ashley Glover. All Rights Reserved.",
   "license": "All Rights Reserved",
   "adapterTarget": {
-    "model": "Mayflash W012 (4-Port GameCube Adapter)",
+    "model": "Universal WUP-028 GameCube Adapter (Official / Mayflash W012 / MEIRIYFA / Nyko)",
     "requiredSwitchMode": "Wii U / NS (Switch)",
     "usbVendorId": "0x057E",
     "usbProductId": "0x0337",
-    "driverBackend": "WinUSB + WHQL ViGEmBus XInput (Silent Service)"
+    "virtualEmulationTarget": "xbox360",
+    "driverBackend": "WinUSB + WHQL ViGEmBus Xbox 360 XInput",
+    "legacyDirectInputFallback": true
+  },
+  "engine": {
+    "highPriorityPolling1000Hz": true,
+    "enableSystemTray": true,
+    "enableOsdToasts": true,
+    "enableAutoUpdater": true,
+    "liveConfigHotReload": true
   },
   "buttonMapping": {
     "faceLayoutPreset": "xbox-spatial",
@@ -18,33 +28,169 @@
     "xboxSpatialLayout": true,
     "zButtonTarget": "RB",
     "startPlusDpadUpActsAsBack": true,
-    "swapTriggersToBumpers": false
+    "swapTriggersToBumpers": false,
+    "dualStageTriggerClick": "none"
   },
   "calibration": {
     "leftStickDeadzone": 0.1,
     "leftStickRangeMultiplier": 1.12,
+    "useOctagonalCalibration": true,
+    "leftStickOctagonalNotches": [
+      0.78,
+      0.72,
+      0.78,
+      0.72,
+      0.78,
+      0.72,
+      0.78,
+      0.72
+    ],
     "rightStickDeadzone": 0.12,
     "rightStickRangeMultiplier": 1.15,
-    "triggerMode": "hair-trigger",
+    "snapbackFilterMs": 6,
+    "snapbackThreshold": 0.55,
+    "triggerMode": "analog-only",
     "triggerThresholdByte": 175,
     "analogTriggerMin": 30,
-    "analogTriggerMax": 225
+    "analogTriggerMax": 225,
+    "perPortOverrides": [
+      {
+        "portIndex": 0,
+        "enabled": false,
+        "label": "Port 1",
+        "mainStickDeadzone": 0.1,
+        "mainStickRangeScale": 1.12,
+        "cStickDeadzone": 0.12,
+        "cStickRangeScale": 1.15,
+        "useOctagonalCalibration": false,
+        "mainNotches": [
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72
+        ]
+      },
+      {
+        "portIndex": 1,
+        "enabled": false,
+        "label": "Port 2",
+        "mainStickDeadzone": 0.1,
+        "mainStickRangeScale": 1.12,
+        "cStickDeadzone": 0.12,
+        "cStickRangeScale": 1.15,
+        "useOctagonalCalibration": false,
+        "mainNotches": [
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72
+        ]
+      },
+      {
+        "portIndex": 2,
+        "enabled": false,
+        "label": "Port 3",
+        "mainStickDeadzone": 0.1,
+        "mainStickRangeScale": 1.12,
+        "cStickDeadzone": 0.12,
+        "cStickRangeScale": 1.15,
+        "useOctagonalCalibration": false,
+        "mainNotches": [
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72
+        ]
+      },
+      {
+        "portIndex": 3,
+        "enabled": false,
+        "label": "Port 4",
+        "mainStickDeadzone": 0.1,
+        "mainStickRangeScale": 1.12,
+        "cStickDeadzone": 0.12,
+        "cStickRangeScale": 1.15,
+        "useOctagonalCalibration": false,
+        "mainNotches": [
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72,
+          0.78,
+          0.72
+        ]
+      }
+    ]
   },
   "rumble": {
     "enabled": true,
     "minimumActivationPercent": 12,
     "pwmIntensityModulation": true,
+    "sigmaDeltaPwmSculpting": true,
     "strengthScalePercent": 100,
     "note": "Requires both Black (Data) and Gray (5V Motor Power) USB connectors plugged in."
   },
   "nonSteamAndEmulators": {
     "worksWithoutSteam": true,
     "autoYieldWinUsbToNativeEmulators": true,
+    "handoverMode": "window-focus",
     "nativeEmulatorProcesses": [
       "Dolphin",
       "Slippi Dolphin",
       "DolphinQt2",
       "DolphinWx"
     ]
-  }
+  },
+  "perGameAutoProfiles": [
+    {
+      "id": "rivals-2",
+      "processName": "Rivals2",
+      "label": "Rivals of Aether II",
+      "faceLayout": "smash-modern",
+      "useNintendoButtonLayout": false,
+      "zMapping": "rb",
+      "dualStageTriggerClick": "none"
+    },
+    {
+      "id": "rocket-league",
+      "processName": "RocketLeague",
+      "label": "Rocket League",
+      "faceLayout": "xbox-spatial",
+      "useNintendoButtonLayout": false,
+      "zMapping": "rb",
+      "dualStageTriggerClick": "bumper"
+    },
+    {
+      "id": "elden-ring",
+      "processName": "eldenring",
+      "label": "Elden Ring",
+      "faceLayout": "xbox-spatial",
+      "useNintendoButtonLayout": false,
+      "zMapping": "rb",
+      "dualStageTriggerClick": "bumper"
+    },
+    {
+      "id": "retroarch",
+      "processName": "retroarch",
+      "label": "RetroArch",
+      "faceLayout": "nintendo-labels",
+      "useNintendoButtonLayout": true,
+      "zMapping": "rb",
+      "dualStageTriggerClick": "none"
+    }
+  ]
 }
