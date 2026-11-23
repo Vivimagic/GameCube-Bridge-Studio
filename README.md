@@ -1,7 +1,7 @@
-# Vivimagic GC Suite (v2.0.0)
+<img width="542" height="629" alt="image" src="https://github.com/user-attachments/assets/12607507-e673-4bb4-a489-951a755b0283" />
 
 Publisher: [Vivimagic](https://github.com/Vivimagic)  
-Repository: https://github.com/Vivimagic/GameCube-Bridge-Studio  
+
 Changelog: [CHANGELOG.md](./CHANGELOG.md)
 
 Universal 4-port GameCube Controller Adapter driver suite, live controller & rumble tester, 1000 Hz MMCSS Xbox 360 / DualShock 4 bridge, automatic window-focus Dolphin/Slippi USB handover, and RP2040 Firmware & SDK workbench for **Windows**, **macOS**, and **Linux / Steam Deck**.
