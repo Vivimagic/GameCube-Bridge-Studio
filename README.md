@@ -1,8 +1,10 @@
 #Vivimagic GameCube Bridge Studio (v1.0.0 GM)
-<img width="542" height="629" alt="image" src="https://github.com/user-attachments/assets/19cad1ae-ec80-4ba1-aae5-e7d16d79ce11" />
+
 
 Publisher: [Vivimagic](https://github.com/Vivimagic)  
 Repository: https://github.com/Vivimagic/GameCube-Bridge-Studio
+
+<img width="542" height="629" alt="image" src="https://github.com/user-attachments/assets/19cad1ae-ec80-4ba1-aae5-e7d16d79ce11" />
 
 Universal 4-port GameCube Controller Adapter driver installer, live input/rumble tester, automatic Dolphin/Slippi USB handover, and RP2040 Firmware & SDK workbench for **Windows**, **macOS**, and **Linux / Steam Deck**.
 
